@@ -9,7 +9,7 @@ Recipes live as one Markdown file each in `recipes/` (50 seeded dinners with ing
 From this folder, with Python 3.11+ (3.10 is fine):
 
 ```bash
-cd meals
+cd weekly-meals
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -23,7 +23,7 @@ On Windows, activate with `.venv\Scripts\activate` instead of `source`.
 ### Without a venv
 
 ```bash
-cd meals
+cd weekly-meals
 pip install -r requirements.txt
 streamlit run app.py
 ```
@@ -38,7 +38,7 @@ streamlit run app.py
 ## Data layout
 
 ```
-meals/
+weekly-meals/
   app.py
   requirements.txt
   pantry.yaml

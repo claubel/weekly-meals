@@ -3,7 +3,6 @@ id: french-potato-plate
 kind: template
 title: French potato plate
 why: One bag of potatoes and one bag of green beans cover four dinners. Salad tomatoes and olives do the rest. Fresh fish night one, chicken next, mince mid-week, tins at the end.
-cook_first: White fish → chicken → mince → tuna / sardines
 monday: fish-meuniere
 tuesday: mustard-roast-chicken
 wednesday: steak-hache

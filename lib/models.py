@@ -84,7 +84,6 @@ class Week:
     title: str
     kind: str  # template | planned
     why: str = ""
-    cook_first: str = ""
     days: dict[str, str] = field(default_factory=dict)
     body: str = ""
     path: str | None = None

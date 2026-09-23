@@ -66,7 +66,6 @@ def _week_from_post(post: frontmatter.Post, path: Path) -> Week:
         title=str(meta.get("title") or path.stem),
         kind=str(meta.get("kind") or "template"),
         why=str(meta.get("why") or ""),
-        cook_first=str(meta.get("cook_first") or ""),
         days=days,
         body=(post.content or "").strip() + "\n",
         path=str(path),
@@ -144,7 +143,6 @@ def dump_week_markdown(week: Week) -> str:
         "kind": week.kind,
         "title": week.title,
         "why": week.why,
-        "cook_first": week.cook_first,
         **{day: week.days.get(day, "") for day in WEEKDAYS},
     }
     body = week.body.strip() or "Saved from the planner.\n"

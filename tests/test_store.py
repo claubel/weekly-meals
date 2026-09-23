@@ -123,7 +123,6 @@ def test_save_week_uses_template_or_planned_folder(tmp_path):
         title="Noodle week",
         kind="template",
         why="One noodle bag.",
-        cook_first="Soup first.",
         days={"monday": "soup", "friday": "sardines"},
         body="Notes.\n",
     )
@@ -132,7 +131,6 @@ def test_save_week_uses_template_or_planned_folder(tmp_path):
         title="This week",
         kind="planned",
         why="",
-        cook_first="",
         days={day: "" for day in WEEKDAYS},
     )
     template_path = store.save_week(template)

@@ -262,13 +262,12 @@ def page_new() -> None:
     recipe_form(blank, is_new=True)
 
 
-def week_from_widgets(title: str, why: str, cook_first: str, days: dict[str, str], kind: str, week_id: str) -> Week:
+def week_from_widgets(title: str, why: str, days: dict[str, str], kind: str, week_id: str) -> Week:
     return Week(
         id=week_id,
         title=title,
         kind=kind,
         why=why,
-        cook_first=cook_first,
         days=days,
         body="Saved from the planner.\n",
     )
@@ -278,7 +277,6 @@ def blank_week_draft() -> dict:
     return {
         "title": "My week",
         "why": "",
-        "cook_first": "Fish → chicken → mince → tins",
         "days": {d: "" for d in WEEKDAYS},
     }
 
@@ -312,7 +310,6 @@ def draft_from_week(week: Week) -> dict:
     return {
         "title": week.title,
         "why": week.why,
-        "cook_first": week.cook_first,
         "days": {d: week.days.get(d, "") or "" for d in WEEKDAYS},
     }
 
@@ -327,7 +324,6 @@ def push_draft_to_widgets(draft: dict) -> None:
     st.session_state["draft"] = draft
     st.session_state["planner-title"] = draft["title"]
     st.session_state["planner-why"] = draft["why"]
-    st.session_state["planner-cook-first"] = draft["cook_first"]
     for day in WEEKDAYS:
         recipe_id = draft["days"].get(day) or ""
         st.session_state[f"day-{day}"] = recipe_id if recipe_id in known else ""
@@ -353,7 +349,6 @@ def page_planner() -> None:
 
     title = st.text_input("Week title", key="planner-title")
     why = st.text_area("Why this grouping works", key="planner-why", height=80)
-    cook_first = st.text_input("Cook this first", key="planner-cook-first")
     options = recipe_options()
     days: dict[str, str] = {}
     cols = st.columns(5)
@@ -369,8 +364,6 @@ def page_planner() -> None:
     recipes_by_id = get_store().recipe_by_id()
     chosen = [recipes_by_id[rid] for rid in days.values() if rid in recipes_by_id]
     multiplier = st.number_input("Servings multiplier", min_value=0.5, max_value=4.0, value=1.0, step=0.5)
-    if cook_first:
-        st.info(cook_first)
     if why:
         st.write(why)
 
@@ -390,7 +383,7 @@ def page_planner() -> None:
 
     save_id = st.text_input("Save as id", value=str(date.today()))
     if st.button("Save planned week", type="primary"):
-        week = week_from_widgets(title, why, cook_first, days, "planned", slugify(save_id))
+        week = week_from_widgets(title, why, days, "planned", slugify(save_id))
         path = get_store().save_week(week)
         st.success(f"Saved {path}")
 
@@ -404,8 +397,6 @@ def page_saved() -> None:
     picked_id = st.selectbox("Week", [w.id for w in weeks], format_func=lambda i: next(w.title for w in weeks if w.id == i) + f" ({i})")
     week = next(w for w in weeks if w.id == picked_id)
     st.write(week.why)
-    if week.cook_first:
-        st.info(week.cook_first)
     recipes_by_id = get_store().recipe_by_id()
     for day in WEEKDAYS:
         rid = week.days.get(day, "")

@@ -39,13 +39,12 @@ def test_yaml_to_ingredients_rejects_a_mapping():
 
 
 def test_week_from_widgets_marks_the_week_as_saved_from_the_planner():
-    week = app.week_from_widgets("Title", "why", "cook", {"monday": "a"}, "planned", "id-1")
+    week = app.week_from_widgets("Title", "why", {"monday": "a"}, "planned", "id-1")
     assert week == Week(
         id="id-1",
         title="Title",
         kind="planned",
         why="why",
-        cook_first="cook",
         days={"monday": "a"},
         body="Saved from the planner.\n",
     )
@@ -54,7 +53,7 @@ def test_week_from_widgets_marks_the_week_as_saved_from_the_planner():
 def test_blank_and_loaded_drafts_cover_every_weekday():
     blank = app.blank_week_draft()
     assert blank["title"] == "My week"
-    assert blank["cook_first"] == "Fish → chicken → mince → tins"
+    assert "cook_first" not in blank
     assert list(blank["days"]) == WEEKDAYS
     assert set(blank["days"].values()) == {""}
 
@@ -63,7 +62,6 @@ def test_blank_and_loaded_drafts_cover_every_weekday():
         title="Noodle week",
         kind="template",
         why="One bag.",
-        cook_first="Soup first.",
         days={"monday": "soup", "friday": "sardines"},
     )
     draft = app.draft_from_week(week)

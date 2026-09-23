@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from datetime import date
 
 import streamlit as st
@@ -259,52 +260,97 @@ def week_from_widgets(title: str, why: str, cook_first: str, days: dict[str, str
     )
 
 
-def page_planner() -> None:
-    st.title("Plan a week")
-    templates = store.load_weeks("template")
-    template_map = {t.id: t for t in templates}
-    source = st.selectbox(
-        "Start from",
-        ["blank", *[t.id for t in templates]],
-        format_func=lambda x: "Blank week" if x == "blank" else template_map[x].title,
-    )
-    if st.button("Load into planner"):
-        if source == "blank":
-            st.session_state["draft"] = {
-                "title": "My week",
-                "why": "",
-                "cook_first": "Fish → chicken → mince → tins",
-                "days": {d: "" for d in WEEKDAYS},
-            }
-        else:
-            week = template_map[source]
-            st.session_state["draft"] = {
-                "title": week.title,
-                "why": week.why,
-                "cook_first": week.cook_first,
-                "days": dict(week.days),
-            }
-        st.rerun()
-
-    draft = st.session_state.get("draft") or {
+def blank_week_draft() -> dict:
+    return {
         "title": "My week",
         "why": "",
         "cook_first": "Fish → chicken → mince → tins",
         "days": {d: "" for d in WEEKDAYS},
     }
 
-    title = st.text_input("Week title", value=draft["title"])
-    why = st.text_area("Why this grouping works", value=draft["why"], height=80)
-    cook_first = st.text_input("Cook this first", value=draft["cook_first"])
+
+def shuffled_blank_draft() -> dict:
+    draft = blank_week_draft()
+    recipe_ids = [rid for rid in recipe_options() if rid]
+    picks = random.sample(recipe_ids, k=min(len(WEEKDAYS), len(recipe_ids)))
+    draft["days"] = {day: picks[i] if i < len(picks) else "" for i, day in enumerate(WEEKDAYS)}
+    return draft
+
+
+def apply_planner_source() -> None:
+    source = st.session_state.get("planner-source", "blank")
+    if source == "blank":
+        push_draft_to_widgets(blank_week_draft())
+        return
+    week = next((t for t in store.load_weeks("template") if t.id == source), None)
+    if week is None:
+        push_draft_to_widgets(blank_week_draft())
+        return
+    push_draft_to_widgets(draft_from_week(week))
+
+
+def shuffle_blank_week() -> None:
+    st.session_state["planner-source"] = "blank"
+    push_draft_to_widgets(shuffled_blank_draft())
+
+
+def draft_from_week(week: Week) -> dict:
+    return {
+        "title": week.title,
+        "why": week.why,
+        "cook_first": week.cook_first,
+        "days": {d: week.days.get(d, "") or "" for d in WEEKDAYS},
+    }
+
+
+def push_draft_to_widgets(draft: dict) -> None:
+    """Write a draft into widget state.
+
+    Day selectboxes keep their own session values after the first render, so
+    updating the draft alone leaves Monday–Friday unchanged.
+    """
+    known = set(recipe_options())
+    st.session_state["draft"] = draft
+    st.session_state["planner-title"] = draft["title"]
+    st.session_state["planner-why"] = draft["why"]
+    st.session_state["planner-cook-first"] = draft["cook_first"]
+    for day in WEEKDAYS:
+        recipe_id = draft["days"].get(day) or ""
+        st.session_state[f"day-{day}"] = recipe_id if recipe_id in known else ""
+
+
+def page_planner() -> None:
+    st.title("Plan a week")
+    templates = store.load_weeks("template")
+    template_map = {t.id: t for t in templates}
+    if "planner-source" not in st.session_state:
+        st.session_state["planner-source"] = "blank"
+    st.selectbox(
+        "Start from",
+        ["blank", *[t.id for t in templates]],
+        format_func=lambda x: "Blank week" if x == "blank" else template_map[x].title,
+        key="planner-source",
+        on_change=apply_planner_source,
+    )
+    st.button("Shuffle", on_click=shuffle_blank_week)
+
+    if "planner-title" not in st.session_state:
+        push_draft_to_widgets(st.session_state.get("draft") or blank_week_draft())
+
+    title = st.text_input("Week title", key="planner-title")
+    why = st.text_area("Why this grouping works", key="planner-why", height=80)
+    cook_first = st.text_input("Cook this first", key="planner-cook-first")
     options = recipe_options()
     days: dict[str, str] = {}
     cols = st.columns(5)
     for i, day in enumerate(WEEKDAYS):
         with cols[i]:
-            current = draft["days"].get(day, "")
-            keys = list(options)
-            index = keys.index(current) if current in options else 0
-            days[day] = st.selectbox(WEEKDAY_LABELS[day], keys, index=index, format_func=lambda k: options[k], key=f"day-{day}")
+            days[day] = st.selectbox(
+                WEEKDAY_LABELS[day],
+                list(options),
+                format_func=lambda k, options=options: options[k],
+                key=f"day-{day}",
+            )
 
     recipes_by_id = store.recipe_by_id()
     chosen = [recipes_by_id[rid] for rid in days.values() if rid in recipes_by_id]

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import random
 from datetime import date
+from pathlib import Path
 
 import streamlit as st
 import yaml
@@ -20,8 +22,20 @@ from lib.models import (
 from lib.shop import merge_shopping_list
 from lib.store import Store, slugify
 
-st.set_page_config(page_title="Weekday meals", layout="wide")
-store = Store()
+store: Store | None = None
+
+
+def get_store() -> Store:
+    """Return the data store, creating it on first use.
+
+    WEEKLY_MEALS_ROOT overrides the project directory so tests can use a
+    temporary copy of the recipes and weeks.
+    """
+    global store
+    if store is None:
+        root = os.environ.get("WEEKLY_MEALS_ROOT")
+        store = Store(Path(root) if root else None)
+    return store
 
 
 def fmt_qty(ing: Ingredient) -> str:
@@ -68,7 +82,7 @@ def yaml_to_ingredients(text: str) -> list[Ingredient]:
 
 
 def shopping_rows(recipes: list[Recipe], multiplier: float) -> list[dict]:
-    pantry = store.pantry()
+    pantry = get_store().pantry()
     merged = merge_shopping_list(recipes, pantry, multiplier)
     return [
         {
@@ -81,12 +95,12 @@ def shopping_rows(recipes: list[Recipe], multiplier: float) -> list[dict]:
 
 
 def recipe_options() -> dict[str, str]:
-    recipes = store.load_recipes()
+    recipes = get_store().load_recipes()
     return {"": "— none —", **{r.id: f"{r.title} ({PROTEIN_LABELS.get(r.protein, r.protein)})" for r in recipes}}
 
 
 def page_recipes() -> None:
-    recipes = store.load_recipes()
+    recipes = get_store().load_recipes()
     st.title("Recipes")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -184,7 +198,7 @@ def recipe_form(recipe: Recipe, *, is_new: bool) -> None:
         body=body,
         path=None if is_new else recipe.path,
     )
-    path = store.save_recipe(saved)
+    path = get_store().save_recipe(saved)
     st.success(f"Saved {path.name}")
     st.session_state["recipe_id"] = saved.id
     st.session_state["page"] = "Recipe"
@@ -192,7 +206,7 @@ def recipe_form(recipe: Recipe, *, is_new: bool) -> None:
 
 
 def page_recipe() -> None:
-    recipes = store.recipe_by_id()
+    recipes = get_store().recipe_by_id()
     ids = list(recipes)
     if not ids:
         st.info("No recipes yet.")
@@ -282,7 +296,7 @@ def apply_planner_source() -> None:
     if source == "blank":
         push_draft_to_widgets(blank_week_draft())
         return
-    week = next((t for t in store.load_weeks("template") if t.id == source), None)
+    week = next((t for t in get_store().load_weeks("template") if t.id == source), None)
     if week is None:
         push_draft_to_widgets(blank_week_draft())
         return
@@ -321,7 +335,7 @@ def push_draft_to_widgets(draft: dict) -> None:
 
 def page_planner() -> None:
     st.title("Plan a week")
-    templates = store.load_weeks("template")
+    templates = get_store().load_weeks("template")
     template_map = {t.id: t for t in templates}
     if "planner-source" not in st.session_state:
         st.session_state["planner-source"] = "blank"
@@ -352,7 +366,7 @@ def page_planner() -> None:
                 key=f"day-{day}",
             )
 
-    recipes_by_id = store.recipe_by_id()
+    recipes_by_id = get_store().recipe_by_id()
     chosen = [recipes_by_id[rid] for rid in days.values() if rid in recipes_by_id]
     multiplier = st.number_input("Servings multiplier", min_value=0.5, max_value=4.0, value=1.0, step=0.5)
     if cook_first:
@@ -377,13 +391,13 @@ def page_planner() -> None:
     save_id = st.text_input("Save as id", value=str(date.today()))
     if st.button("Save planned week", type="primary"):
         week = week_from_widgets(title, why, cook_first, days, "planned", slugify(save_id))
-        path = store.save_week(week)
+        path = get_store().save_week(week)
         st.success(f"Saved {path}")
 
 
 def page_saved() -> None:
     st.title("Saved weeks")
-    weeks = store.load_weeks("planned")
+    weeks = get_store().load_weeks("planned")
     if not weeks:
         st.info("No saved weeks yet. Plan a week and click Save.")
         return
@@ -392,7 +406,7 @@ def page_saved() -> None:
     st.write(week.why)
     if week.cook_first:
         st.info(week.cook_first)
-    recipes_by_id = store.recipe_by_id()
+    recipes_by_id = get_store().recipe_by_id()
     for day in WEEKDAYS:
         rid = week.days.get(day, "")
         recipe = recipes_by_id.get(rid)
@@ -421,6 +435,7 @@ PAGES = {
 
 
 def main() -> None:
+    st.set_page_config(page_title="Weekday meals", layout="wide")
     if "page" not in st.session_state:
         st.session_state["page"] = "Recipes"
     page = st.sidebar.radio("Go to", list(PAGES), index=list(PAGES).index(st.session_state["page"]))
@@ -430,4 +445,5 @@ def main() -> None:
     PAGES[st.session_state["page"]]()
 
 
-main()
+if __name__ == "__main__":
+    main()

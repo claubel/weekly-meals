@@ -54,3 +54,12 @@ Edit `pantry.yaml` to change which staples are left off the shopping list (soy, 
 ## Dependencies
 
 Listed in `requirements.txt`: Streamlit, PyYAML, python-frontmatter.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Tests live in `tests/`. They use a temporary data root and do not write to `recipes/` or `weeks/planned/`.

@@ -73,12 +73,46 @@ def _week_from_post(post: frontmatter.Post, path: Path) -> Week:
     )
 
 
+class _RecipeDumper(yaml.SafeDumper):
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
+
+
+def _represent_recipe_list(dumper: yaml.SafeDumper, data: list) -> yaml.Node:
+    flow = all(isinstance(item, str) for item in data)
+    return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=flow)
+
+
+def _represent_recipe_dict(dumper: yaml.SafeDumper, data: dict) -> yaml.Node:
+    flow = "item" in data and "id" not in data
+    return dumper.represent_mapping("tag:yaml.org,2002:map", data, flow_style=flow)
+
+
+_RecipeDumper.add_representer(list, _represent_recipe_list)
+_RecipeDumper.add_representer(dict, _represent_recipe_dict)
+
+
+def _canonical_qty(qty: float) -> int | float:
+    if float(qty).is_integer():
+        return int(qty)
+    return qty
+
+
+def _space_flow_maps(text: str) -> str:
+    return re.sub(
+        r"^  - \{(.+)\}$",
+        lambda match: "  - { " + match.group(1) + " }",
+        text,
+        flags=re.MULTILINE,
+    )
+
+
 def dump_recipe_markdown(recipe: Recipe) -> str:
     ingredients = [
         {
             "aisle": ing.aisle,
             "item": ing.item,
-            **({"qty": ing.qty} if ing.qty is not None else {}),
+            **({"qty": _canonical_qty(ing.qty)} if ing.qty is not None else {}),
             **({"unit": ing.unit} if ing.unit else {}),
         }
         for ing in recipe.ingredients
@@ -93,8 +127,15 @@ def dump_recipe_markdown(recipe: Recipe) -> str:
         "tags": recipe.tags,
         "ingredients": ingredients,
     }
-    post = frontmatter.Post(recipe.body.rstrip() + "\n", **meta)
-    return frontmatter.dumps(post, sort_keys=False)
+    meta_yaml = yaml.dump(
+        meta,
+        Dumper=_RecipeDumper,
+        sort_keys=False,
+        allow_unicode=True,
+        default_flow_style=False,
+    ).strip()
+    body = recipe.body.rstrip() + "\n"
+    return f"---\n{_space_flow_maps(meta_yaml)}\n---\n\n{body}"
 
 
 def dump_week_markdown(week: Week) -> str:

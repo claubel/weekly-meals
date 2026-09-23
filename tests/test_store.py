@@ -1,5 +1,5 @@
 from lib.models import WEEKDAYS, Ingredient, Recipe, Week
-from lib.store import Store, slugify
+from lib.store import Store, dump_recipe_markdown, slugify
 
 
 def test_slugify_normalizes_punctuation_and_blank_text():
@@ -47,9 +47,19 @@ def test_save_and_load_recipe_round_trip(tmp_path):
     assert recipe.path == str(path)
 
     text = path.read_text(encoding="utf-8")
-    salt_block = text.split("- aisle: other", 1)[1]
-    assert "qty:" not in salt_block
-    assert "unit:" not in salt_block
+    salt_line = next(line for line in text.splitlines() if "item: salt" in line)
+    assert salt_line == "  - { aisle: other, item: salt }"
+
+
+def test_dump_recipe_markdown_uses_seeded_layout():
+    recipe = _recipe()
+    recipe.ingredients.append(Ingredient(item="oil", aisle="other", qty=0.5, unit="tsp"))
+    text = dump_recipe_markdown(recipe)
+    assert "tags: [weeknight, pan]\n" in text
+    assert "  - { aisle: protein, item: chicken thigh, qty: 2, unit: piece }\n" in text
+    assert "  - { aisle: other, item: salt }\n" in text
+    assert "  - { aisle: other, item: oil, qty: 0.5, unit: tsp }\n" in text
+    assert "2.0" not in text
 
 
 def test_load_recipes_sorts_by_title_and_parses_loose_frontmatter(tmp_path):

@@ -5,43 +5,16 @@ protein: minced_beef
 carb: noodles
 time_min: 20
 servings: 1
-tags:
-- japanese
-- noodles
-- weeknight
+tags: [japanese, noodles, weeknight]
 ingredients:
-- aisle: protein
-  item: minced beef
-  qty: 150.0
-  unit: g
-- aisle: carb
-  item: udon
-  qty: 1.0
-  unit: pack
-- aisle: veg
-  item: napa cabbage
-  qty: 200.0
-  unit: g
-- aisle: veg
-  item: onion
-  qty: 0.5
-  unit: piece
-- aisle: veg
-  item: red chilli
-  qty: 0.5
-  unit: piece
-- aisle: other
-  item: soy sauce
-  qty: 1.0
-  unit: tbsp
-- aisle: other
-  item: mirin
-  qty: 1.0
-  unit: tbsp
-- aisle: other
-  item: sesame oil
-  qty: 1.0
-  unit: tsp
+  - { aisle: protein, item: minced beef, qty: 150, unit: g }
+  - { aisle: carb, item: udon, qty: 1, unit: pack }
+  - { aisle: veg, item: napa cabbage, qty: 200, unit: g }
+  - { aisle: veg, item: onion, qty: 0.5, unit: piece }
+  - { aisle: veg, item: red chilli, qty: 0.5, unit: piece }
+  - { aisle: other, item: soy sauce, qty: 1, unit: tbsp }
+  - { aisle: other, item: mirin, qty: 1, unit: tbsp }
+  - { aisle: other, item: sesame oil, qty: 1, unit: tsp }
 ---
 
 ## Method
